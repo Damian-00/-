@@ -1,0 +1,23 @@
+{% extends 'base.html' %}
+{% block title %}Вход{% endblock %}
+{% block public %}
+<div class="auth-wrap">
+  <div class="card auth-card shadow">
+    <div class="card-body p-4">
+      <h2 class="h4 text-center mb-4"><i class="bi bi-wallet2 text-primary"></i> Вход в FinControl</h2>
+      {% include '_flash.html' %}
+      <form method="post">
+        <input type="hidden" name="_csrf" value="{{ csrf_token() }}">
+        <div class="mb-3"><label class="form-label">Логин или e-mail</label>
+          <input name="username" class="form-control" required autofocus></div>
+        <div class="mb-3"><label class="form-label">Пароль</label>
+          <input name="password" type="password" class="form-control" required></div>
+        <div class="form-check mb-3"><input class="form-check-input" type="checkbox" name="remember" id="rem">
+          <label class="form-check-label" for="rem">Запомнить меня</label></div>
+        <button class="btn btn-primary w-100">Войти</button>
+      </form>
+      <p class="text-center mt-3 mb-0 small">Нет аккаунта? <a href="{{ url_for('register') }}">Зарегистрироваться</a></p>
+    </div>
+  </div>
+</div>
+{% endblock %}

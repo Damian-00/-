@@ -1,0 +1,62 @@
+{% extends 'base.html' %}
+{% block title %}Цели{% endblock %}
+{% block heading %}Финансовые цели{% endblock %}
+{% block content %}
+<div class="d-flex justify-content-end mb-3">
+  <button class="btn btn-primary btn-sm" onclick="editGoal({})"><i class="bi bi-plus-lg"></i> Новая цель</button></div>
+<div class="row g-3">
+  {% for g in goals %}{% set p = g.percent() %}
+  <div class="col-md-6 col-xl-4"><div class="card h-100"><div class="card-body">
+    <div class="d-flex justify-content-between align-items-start">
+      <h5>{% if p >= 100 %}<i class="bi bi-check-circle-fill text-success"></i>{% else %}<i class="bi bi-bullseye text-info"></i>{% endif %} {{ g.name }}</h5>
+      <div class="dropdown"><button class="btn btn-sm btn-link" data-bs-toggle="dropdown"><i class="bi bi-three-dots-vertical"></i></button>
+        <ul class="dropdown-menu dropdown-menu-end">
+          <li><button class="dropdown-item" onclick='editGoal({{ {"id":g.id,"name":g.name,"target_amount":g.target_amount,"deadline":g.deadline.isoformat() if g.deadline else ""}|tojson }})'>Изменить</button></li>
+          <li><form method="post" action="{{ url_for('goal_delete', gid=g.id) }}" onsubmit="return confirm('Удалить цель?')">
+            <input type="hidden" name="_csrf" value="{{ csrf_token() }}"><button class="dropdown-item text-danger">Удалить</button></form></li>
+        </ul></div>
+    </div>
+    <div class="goal-ring my-3" style="--p:{{ p }}"><span>{{ p }}%</span></div>
+    <div class="d-flex justify-content-between small"><span class="text-muted">Накоплено</span><b>{{ g.current_amount|money }}</b></div>
+    <div class="d-flex justify-content-between small"><span class="text-muted">Цель</span><b>{{ g.target_amount|money }}</b></div>
+    <div class="d-flex justify-content-between small"><span class="text-muted">Осталось</span><b>{{ [g.target_amount-g.current_amount,0]|max|money }}</b></div>
+    {% if g.deadline %}
+    <div class="d-flex justify-content-between small"><span class="text-muted">Срок</span><b>{{ g.deadline.strftime('%d.%m.%Y') }}</b></div>
+    {% if p < 100 %}<div class="alert alert-info small py-2 mt-2 mb-0">Откладывайте <b>{{ g.monthly_needed()|money }}</b> в месяц, чтобы успеть к сроку.</div>{% endif %}
+    {% endif %}
+    <form method="post" action="{{ url_for('goal_deposit', gid=g.id) }}" class="input-group input-group-sm mt-3">
+      <input type="hidden" name="_csrf" value="{{ csrf_token() }}">
+      <input name="amount" class="form-control" placeholder="Сумма" required>
+      <button name="action" value="deposit" class="btn btn-success" title="Пополнить"><i class="bi bi-plus-lg"></i></button>
+      <button name="action" value="withdraw" class="btn btn-outline-secondary" title="Снять"><i class="bi bi-dash-lg"></i></button>
+    </form>
+  </div></div></div>
+  {% else %}
+  <div class="col-12 text-center text-muted py-5"><i class="bi bi-bullseye fs-1"></i><p>Поставьте первую финансовую цель — например, «Отпуск» или «Подушка безопасности».</p></div>
+  {% endfor %}
+</div>
+
+<div class="modal fade" id="goalModal" tabindex="-1"><div class="modal-dialog"><div class="modal-content">
+  <form method="post"><input type="hidden" name="_csrf" value="{{ csrf_token() }}"><input type="hidden" name="id">
+    <div class="modal-header"><h5 class="modal-title">Цель</h5><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div>
+    <div class="modal-body">
+      <div class="mb-3"><label class="form-label">Название</label><input name="name" class="form-control" required></div>
+      <div class="mb-3"><label class="form-label">Целевая сумма</label><input name="target_amount" class="form-control" required></div>
+      <div class="mb-3 new-only"><label class="form-label">Уже накоплено</label><input name="current_amount" class="form-control" value="0"></div>
+      <div class="mb-3"><label class="form-label">Срок (необязательно)</label><input type="date" name="deadline" class="form-control"></div>
+    </div>
+    <div class="modal-footer"><button class="btn btn-primary">Сохранить</button></div>
+  </form>
+</div></div></div>
+{% endblock %}
+{% block scripts %}
+<script>
+function editGoal(g) {
+  const e = document.querySelector('#goalModal form').elements;
+  e['id'].value = g.id || ''; e['name'].value = g.name || ''; e['target_amount'].value = g.target_amount || '';
+  e['deadline'].value = g.deadline || '';
+  document.querySelector('#goalModal .new-only').classList.toggle('d-none', !!g.id);
+  new bootstrap.Modal('#goalModal').show();
+}
+</script>
+{% endblock %}

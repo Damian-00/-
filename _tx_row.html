@@ -1,0 +1,17 @@
+<tr>
+  <td class="text-nowrap">{{ t.date.strftime('%d.%m.%Y') }}</td>
+  <td>{% if t.category %}<span class="cat-dot" style="background:{{ t.category.color }}"><i class="bi bi-{{ t.category.icon }}"></i></span>
+      {{ t.category.name }}{% else %}<span class="cat-dot bg-secondary"><i class="bi bi-arrow-repeat"></i></span> Перевод{% endif %}</td>
+  <td class="text-muted small">{{ t.description }}</td>
+  <td class="small"><span class="badge rounded-pill" style="background:{{ t.account.color }}">{{ t.account.name }}</span></td>
+  <td class="text-end fw-semibold text-nowrap {{ 'text-success' if t.type=='income' else 'text-danger' }}">
+    {{ '+' if t.type=='income' else '−' }}{{ t.amount|money }}</td>
+  {% if actions %}
+  <td class="text-end text-nowrap">
+    <a href="{{ url_for('transaction_form', tid=t.id) }}" class="btn btn-sm btn-outline-secondary"><i class="bi bi-pencil"></i></a>
+    <form method="post" action="{{ url_for('transaction_delete', tid=t.id) }}" class="d-inline" onsubmit="return confirm('Удалить операцию?')">
+      <input type="hidden" name="_csrf" value="{{ csrf_token() }}">
+      <button class="btn btn-sm btn-outline-danger"><i class="bi bi-trash"></i></button></form>
+  </td>
+  {% endif %}
+</tr>

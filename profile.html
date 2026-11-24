@@ -1,0 +1,40 @@
+{% extends 'base.html' %}
+{% block title %}Профиль{% endblock %}
+{% block heading %}Профиль{% endblock %}
+{% block content %}
+<div class="row g-3">
+  <div class="col-lg-4"><div class="card h-100"><div class="card-body text-center">
+    <div class="avatar mx-auto mb-3">{{ current_user.username[0]|upper }}</div>
+    <h5>{{ current_user.username }}</h5><p class="text-muted">{{ current_user.email }}</p>
+    <p class="small text-muted">С нами с {{ current_user.created_at.strftime('%d.%m.%Y') }}</p>
+    <div class="row text-center g-2 mt-2">
+      {% for k, l in [('transactions','операций'),('accounts','счетов'),('categories','категорий'),('goals','целей')] %}
+      <div class="col-6"><div class="border rounded p-2"><div class="fw-bold fs-5">{{ stats[k] }}</div><div class="small text-muted">{{ l }}</div></div></div>{% endfor %}
+    </div>
+  </div></div></div>
+  <div class="col-lg-8">
+    <div class="card mb-3"><div class="card-header">Настройки</div><div class="card-body">
+      <form method="post" class="row g-2 align-items-end"><input type="hidden" name="_csrf" value="{{ csrf_token() }}"><input type="hidden" name="action" value="settings">
+        <div class="col-sm-6"><label class="form-label">Валюта отображения</label><select name="currency" class="form-select">
+          {% for c in ['₽','$','€','₸','Br','₴','¥'] %}<option {% if current_user.currency==c %}selected{% endif %}>{{ c }}</option>{% endfor %}</select></div>
+        <div class="col-sm-auto"><button class="btn btn-primary">Сохранить</button></div>
+      </form>
+    </div></div>
+    <div class="card mb-3"><div class="card-header">Смена пароля</div><div class="card-body">
+      <form method="post" class="row g-2 align-items-end"><input type="hidden" name="_csrf" value="{{ csrf_token() }}"><input type="hidden" name="action" value="password">
+        <div class="col-sm-5"><label class="form-label">Текущий пароль</label><input type="password" name="old_password" class="form-control" required></div>
+        <div class="col-sm-5"><label class="form-label">Новый пароль</label><input type="password" name="new_password" class="form-control" minlength="6" required></div>
+        <div class="col-sm-2"><button class="btn btn-primary w-100">Изменить</button></div>
+      </form>
+    </div></div>
+    <div class="card border-danger"><div class="card-header text-danger">Удаление аккаунта</div><div class="card-body">
+      <p class="small text-muted">Все ваши данные (счета, операции, бюджеты, цели) будут удалены без возможности восстановления.</p>
+      <form method="post" class="row g-2 align-items-end" onsubmit="return confirm('Точно удалить аккаунт?')">
+        <input type="hidden" name="_csrf" value="{{ csrf_token() }}"><input type="hidden" name="action" value="delete">
+        <div class="col-sm-6"><input type="password" name="confirm_password" class="form-control" placeholder="Введите пароль для подтверждения" required></div>
+        <div class="col-sm-auto"><button class="btn btn-danger">Удалить аккаунт</button></div>
+      </form>
+    </div></div>
+  </div>
+</div>
+{% endblock %}

@@ -1,0 +1,70 @@
+{% extends 'base.html' %}
+{% block title %}Счета{% endblock %}
+{% block heading %}Счета{% endblock %}
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-3">
+  <div class="fs-5">Всего на счетах: <b>{{ total|money }}</b></div>
+  <div class="d-flex gap-2">
+    <button class="btn btn-outline-primary btn-sm" data-bs-toggle="modal" data-bs-target="#transferModal"><i class="bi bi-arrow-left-right"></i> Перевод</button>
+    <button class="btn btn-primary btn-sm" onclick="editAccount({})"><i class="bi bi-plus-lg"></i> Новый счёт</button>
+  </div>
+</div>
+<div class="row g-3">
+  {% for a in accounts %}
+  <div class="col-md-6 col-xl-4">
+    <div class="card account-card h-100" style="border-top:4px solid {{ a.color }}"><div class="card-body">
+      <div class="d-flex justify-content-between">
+        <div><div class="text-muted small">{{ a.type_label }}</div><h5 class="mb-1">{{ a.name }}</h5></div>
+        <i class="bi bi-{{ {'cash':'cash-stack','card':'credit-card','deposit':'bank'}.get(a.type,'wallet') }} fs-3" style="color:{{ a.color }}"></i>
+      </div>
+      <div class="fs-4 fw-bold my-2">{{ a.balance()|money }}</div>
+      <div class="small text-muted">Начальный остаток: {{ a.initial_balance|money }} · операций: {{ a.transactions|length }}</div>
+      <div class="mt-3 d-flex gap-2">
+        <a href="{{ url_for('transactions', account=a.id, period='all') }}" class="btn btn-sm btn-outline-secondary">Операции</a>
+        <button class="btn btn-sm btn-outline-primary" onclick='editAccount({{ {"id":a.id,"name":a.name,"type":a.type,"initial_balance":a.initial_balance,"color":a.color}|tojson }})'><i class="bi bi-pencil"></i></button>
+        <form method="post" action="{{ url_for('account_delete', aid=a.id) }}" onsubmit="return confirm('Удалить счёт вместе со всеми его операциями?')">
+          <input type="hidden" name="_csrf" value="{{ csrf_token() }}"><button class="btn btn-sm btn-outline-danger"><i class="bi bi-trash"></i></button></form>
+      </div>
+    </div></div>
+  </div>
+  {% endfor %}
+</div>
+
+<div class="modal fade" id="accModal" tabindex="-1"><div class="modal-dialog"><div class="modal-content">
+  <form method="post"><input type="hidden" name="_csrf" value="{{ csrf_token() }}"><input type="hidden" name="id">
+    <div class="modal-header"><h5 class="modal-title">Счёт</h5><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div>
+    <div class="modal-body">
+      <div class="mb-3"><label class="form-label">Название</label><input name="name" class="form-control" required></div>
+      <div class="mb-3"><label class="form-label">Тип</label><select name="type" class="form-select">
+        {% for k, v in types.items() %}<option value="{{ k }}">{{ v }}</option>{% endfor %}</select></div>
+      <div class="mb-3"><label class="form-label">Начальный остаток</label><input name="initial_balance" class="form-control" value="0"></div>
+      <div class="mb-3"><label class="form-label">Цвет</label><input type="color" name="color" class="form-control form-control-color" value="#0d6efd"></div>
+    </div>
+    <div class="modal-footer"><button class="btn btn-primary">Сохранить</button></div>
+  </form>
+</div></div></div>
+
+<div class="modal fade" id="transferModal" tabindex="-1"><div class="modal-dialog"><div class="modal-content">
+  <form method="post" action="{{ url_for('account_transfer') }}"><input type="hidden" name="_csrf" value="{{ csrf_token() }}">
+    <div class="modal-header"><h5 class="modal-title">Перевод между счетами</h5><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div>
+    <div class="modal-body">
+      <div class="mb-3"><label class="form-label">Откуда</label><select name="from_id" class="form-select">
+        {% for a in accounts %}<option value="{{ a.id }}">{{ a.name }} ({{ a.balance()|money }})</option>{% endfor %}</select></div>
+      <div class="mb-3"><label class="form-label">Куда</label><select name="to_id" class="form-select">
+        {% for a in accounts %}<option value="{{ a.id }}" {% if loop.index==2 %}selected{% endif %}>{{ a.name }}</option>{% endfor %}</select></div>
+      <div class="mb-3"><label class="form-label">Сумма</label><input name="amount" class="form-control" required></div>
+    </div>
+    <div class="modal-footer"><button class="btn btn-primary">Перевести</button></div>
+  </form>
+</div></div></div>
+{% endblock %}
+{% block scripts %}
+<script>
+function editAccount(a) {
+  const f = document.querySelector('#accModal form');
+  f.elements['id'].value = a.id || ''; f.elements['name'].value = a.name || ''; f.elements['type'].value = a.type || 'card';
+  f.elements['initial_balance'].value = a.initial_balance ?? 0; f.elements['color'].value = a.color || '#0d6efd';
+  new bootstrap.Modal('#accModal').show();
+}
+</script>
+{% endblock %}

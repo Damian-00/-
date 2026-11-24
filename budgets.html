@@ -1,0 +1,55 @@
+{% extends 'base.html' %}
+{% block title %}Бюджеты{% endblock %}
+{% block heading %}Бюджеты{% endblock %}
+{% block content %}
+<div class="d-flex flex-wrap justify-content-between align-items-center mb-3 gap-2">
+  <div class="btn-group">
+    <a href="{{ url_for('budgets', month=prev_month) }}" class="btn btn-outline-secondary"><i class="bi bi-chevron-left"></i></a>
+    <span class="btn btn-outline-secondary disabled text-body fw-semibold" style="min-width:130px">{{ month_label }}</span>
+    <a href="{{ url_for('budgets', month=next_month) }}" class="btn btn-outline-secondary"><i class="bi bi-chevron-right"></i></a>
+  </div>
+  <form method="post" action="{{ url_for('budgets_copy') }}"><input type="hidden" name="_csrf" value="{{ csrf_token() }}">
+    <input type="hidden" name="month" value="{{ month }}">
+    <button class="btn btn-sm btn-outline-primary"><i class="bi bi-files"></i> Скопировать из прошлого месяца</button></form>
+</div>
+
+<div class="row g-3">
+  <div class="col-lg-8">
+    {% if budgets %}
+    <div class="card mb-3"><div class="card-body">
+      {% set tp = (total_spent / total_limit * 100) if total_limit else 0 %}
+      <div class="d-flex justify-content-between"><b>Итого по бюджетам</b><span>{{ total_spent|money }} из {{ total_limit|money }}</span></div>
+      <div class="progress mt-2" style="height:12px"><div class="progress-bar {{ 'bg-danger' if tp>=100 else 'bg-warning' if tp>=80 else 'bg-success' }}" style="width:{{ [tp,100]|min }}%"></div></div>
+      <div class="small text-muted mt-1">Остаток: {{ (total_limit-total_spent)|money }}</div>
+    </div></div>
+    {% endif %}
+    <div class="card"><ul class="list-group list-group-flush">
+      {% for b in budgets %}{% set p = b.percent() %}{% set s = b.spent() %}
+      <li class="list-group-item py-3">
+        <div class="d-flex align-items-center mb-2">
+          <span class="cat-dot me-2" style="background:{{ b.category.color }}"><i class="bi bi-{{ b.category.icon }}"></i></span>
+          <b class="flex-grow-1">{{ b.category.name }}</b>
+          <span class="me-3">{{ s|money }} / {{ b.limit_amount|money }}</span>
+          <form method="post" action="{{ url_for('budget_delete', bid=b.id) }}"><input type="hidden" name="_csrf" value="{{ csrf_token() }}">
+            <button class="btn btn-sm btn-link text-danger p-0"><i class="bi bi-x-lg"></i></button></form>
+        </div>
+        <div class="progress" style="height:10px"><div class="progress-bar {{ 'bg-danger' if p>=100 else 'bg-warning' if p>=80 else 'bg-success' }}" style="width:{{ [p,100]|min }}%"></div></div>
+        <div class="small mt-1 {{ 'text-danger' if p>=100 else 'text-muted' }}">
+          {% if p >= 100 %}Превышение на {{ (s-b.limit_amount)|money }}{% else %}Осталось {{ (b.limit_amount-s)|money }} ({{ (100-p)|round(1) }}%){% endif %}</div>
+      </li>
+      {% else %}<li class="list-group-item text-center text-muted py-5">На этот месяц бюджеты не заданы</li>{% endfor %}
+    </ul></div>
+  </div>
+  <div class="col-lg-4">
+    <div class="card"><div class="card-header">Установить лимит</div><div class="card-body">
+      <form method="post"><input type="hidden" name="_csrf" value="{{ csrf_token() }}"><input type="hidden" name="month" value="{{ month }}">
+        <div class="mb-3"><label class="form-label">Категория расходов</label><select name="category_id" class="form-select">
+          {% for c in categories %}<option value="{{ c.id }}">{{ c.name }}</option>{% endfor %}</select></div>
+        <div class="mb-3"><label class="form-label">Лимит на месяц</label><input name="limit_amount" class="form-control" required></div>
+        <button class="btn btn-primary w-100">Сохранить</button>
+        <div class="form-text">Если лимит для категории уже есть, он будет обновлён.</div>
+      </form>
+    </div></div>
+  </div>
+</div>
+{% endblock %}

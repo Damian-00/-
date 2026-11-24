@@ -1,0 +1,103 @@
+{% extends 'base.html' %}
+{% block title %}Главная{% endblock %}
+{% block heading %}Главная панель{% endblock %}
+{% block content %}
+<div class="row g-3 mb-4">
+  {% for label, value, icon, cls in [
+    ('Общий баланс', total, 'wallet2', 'primary'),
+    ('Доходы за месяц', summary.income, 'arrow-down-circle', 'success'),
+    ('Расходы за месяц', summary.expense, 'arrow-up-circle', 'danger'),
+    ('Сальдо месяца', summary.balance, 'piggy-bank', 'info')] %}
+  <div class="col-sm-6 col-xl-3">
+    <div class="card stat-card h-100"><div class="card-body d-flex align-items-center gap-3">
+      <div class="stat-icon bg-{{ cls }}-subtle text-{{ cls }}"><i class="bi bi-{{ icon }}"></i></div>
+      <div><div class="text-muted small">{{ label }}</div><div class="fs-5 fw-bold">{{ value|money }}</div></div>
+    </div></div>
+  </div>
+  {% endfor %}
+</div>
+
+<div class="row g-3 mb-4">
+  <div class="col-lg-8">
+    <div class="card h-100"><div class="card-header">Доходы и расходы за 6 месяцев</div>
+      <div class="card-body"><canvas id="dynChart" height="120"></canvas></div></div>
+  </div>
+  <div class="col-lg-4">
+    <div class="card h-100"><div class="card-header">Структура расходов (месяц)</div>
+      <div class="card-body">
+        {% if expense_cats %}<canvas id="catChart"></canvas>
+        {% else %}<p class="text-muted text-center my-5">Нет расходов в этом месяце</p>{% endif %}
+      </div></div>
+  </div>
+</div>
+
+<div class="row g-3 mb-4">
+  <div class="col-lg-4">
+    <div class="card h-100"><div class="card-header d-flex justify-content-between">Счета
+      <a href="{{ url_for('accounts') }}" class="small">все</a></div>
+      <ul class="list-group list-group-flush">
+        {% for a in accounts %}
+        <li class="list-group-item d-flex justify-content-between align-items-center">
+          <span><span class="acc-dot" style="background:{{ a.color }}"></span>{{ a.name }}</span>
+          <span class="fw-semibold">{{ a.balance()|money }}</span></li>
+        {% endfor %}
+      </ul></div>
+  </div>
+  <div class="col-lg-4">
+    <div class="card h-100"><div class="card-header">Прогноз на конец месяца</div>
+      <div class="card-body">
+        <div class="d-flex justify-content-between mb-2"><span class="text-muted">Потрачено</span><b>{{ forecast.spent|money }}</b></div>
+        <div class="d-flex justify-content-between mb-2"><span class="text-muted">Текущий темп в день</span><b>{{ forecast.avg_daily|money }}</b></div>
+        <div class="d-flex justify-content-between mb-2"><span class="text-muted">Ожидаемые расходы</span><b>{{ forecast.projected|money }}</b></div>
+        <div class="d-flex justify-content-between"><span class="text-muted">Сальдо (по полученным доходам)</span>
+          <b class="{{ 'text-success' if forecast.projected_balance >= 0 else 'text-danger' }}">{{ forecast.projected_balance|money }}</b></div>
+        <div class="small text-muted mt-3">До конца месяца: {{ forecast.days_left }} дн.</div>
+      </div></div>
+  </div>
+  <div class="col-lg-4">
+    <div class="card h-100"><div class="card-header d-flex justify-content-between">Бюджеты месяца
+      <a href="{{ url_for('budgets') }}" class="small">все</a></div>
+      <div class="card-body">
+        {% for b in budgets %}{% set p = b.percent() %}
+        <div class="mb-3">
+          <div class="d-flex justify-content-between small"><span>{{ b.category.name }}</span>
+            <span>{{ b.spent()|money }} / {{ b.limit_amount|money }}</span></div>
+          <div class="progress" style="height:8px"><div class="progress-bar {{ 'bg-danger' if p>=100 else 'bg-warning' if p>=80 else 'bg-success' }}"
+            style="width:{{ [p,100]|min }}%"></div></div>
+        </div>
+        {% else %}<p class="text-muted small">Бюджеты не заданы. <a href="{{ url_for('budgets') }}">Создать</a></p>{% endfor %}
+      </div></div>
+  </div>
+</div>
+
+<div class="row g-3">
+  <div class="col-lg-8">
+    <div class="card"><div class="card-header d-flex justify-content-between">Последние операции
+      <a href="{{ url_for('transactions') }}" class="small">все операции</a></div>
+      <div class="table-responsive"><table class="table table-hover align-middle mb-0">
+        <tbody>{% for t in recent %}{% set actions = False %}{% include '_tx_row.html' %}
+        {% else %}<tr><td class="text-muted text-center py-4">Операций пока нет — добавьте первую!</td></tr>{% endfor %}</tbody>
+      </table></div></div>
+  </div>
+  <div class="col-lg-4">
+    <div class="card h-100"><div class="card-header d-flex justify-content-between">Цели
+      <a href="{{ url_for('goals') }}" class="small">все</a></div>
+      <div class="card-body">
+        {% for g in goals %}
+        <div class="mb-3"><div class="d-flex justify-content-between small"><span>{{ g.name }}</span><span>{{ g.percent() }}%</span></div>
+          <div class="progress" style="height:8px"><div class="progress-bar bg-info" style="width:{{ g.percent() }}%"></div></div></div>
+        {% else %}<p class="text-muted small">Целей пока нет.</p>{% endfor %}
+      </div></div>
+  </div>
+</div>
+{% endblock %}
+{% block scripts %}
+<script>
+const dyn = {{ dynamics|tojson }};
+const cats = {{ expense_cats|tojson }};
+barChart('dynChart', dyn.labels, [
+  {label: 'Доходы', data: dyn.income, backgroundColor: '#198754'},
+  {label: 'Расходы', data: dyn.expense, backgroundColor: '#dc3545'}]);
+if (cats.length) doughnutChart('catChart', cats);
+</script>
+{% endblock %}

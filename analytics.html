@@ -1,0 +1,82 @@
+{% extends 'base.html' %}
+{% block title %}Аналитика{% endblock %}
+{% block heading %}Аналитика{% endblock %}
+{% block content %}
+<form class="card card-body mb-3 d-flex flex-row flex-wrap gap-2 align-items-end" method="get">
+  <div><label class="form-label small">Период</label>
+    <select name="period" class="form-select form-select-sm" onchange="toggleCustom(this)">
+      {% for v, l in [('month','Текущий месяц'),('prev_month','Прошлый месяц'),('week','Эта неделя'),('3months','3 месяца'),('year','Этот год'),('custom','Свой период')] %}
+      <option value="{{ v }}" {% if period==v %}selected{% endif %}>{{ l }}</option>{% endfor %}
+    </select></div>
+  <div class="custom-range {% if period!='custom' %}d-none{% endif %}"><label class="form-label small">С</label>
+    <input type="date" name="start" value="{{ start.isoformat() }}" class="form-control form-control-sm"></div>
+  <div class="custom-range {% if period!='custom' %}d-none{% endif %}"><label class="form-label small">По</label>
+    <input type="date" name="end" value="{{ end.isoformat() }}" class="form-control form-control-sm"></div>
+  <button class="btn btn-sm btn-primary">Показать</button>
+  <span class="ms-auto text-muted small">{{ start.strftime('%d.%m.%Y') }} — {{ end.strftime('%d.%m.%Y') }}</span>
+</form>
+
+<div class="row g-3 mb-3">
+  {% for label, value, cls, fmt in [
+    ('Доходы', summary.income, 'success', 'm'), ('Расходы', summary.expense, 'danger', 'm'),
+    ('Сальдо', summary.balance, 'primary', 'm'), ('Норма сбережений', summary.savings_rate, 'info', '%'),
+    ('Средний расход в день', summary.avg_daily_expense, 'secondary', 'm')] %}
+  <div class="col-sm-6 col-xl"><div class="card stat-card h-100"><div class="card-body">
+    <div class="text-muted small">{{ label }}</div>
+    <div class="fs-5 fw-bold text-{{ cls }}">{% if fmt=='%' %}{{ value }}%{% else %}{{ value|money }}{% endif %}</div>
+  </div></div></div>
+  {% endfor %}
+</div>
+
+<div class="card mb-3"><div class="card-header"><i class="bi bi-lightbulb"></i> Рекомендации</div>
+  <div class="card-body">
+    {% for t in tips %}<div class="alert alert-{{ t.level }} d-flex gap-2 py-2 mb-2"><i class="bi bi-{{ t.icon }}"></i><div>{{ t.text }}</div></div>{% endfor %}
+  </div></div>
+
+<div class="row g-3 mb-3">
+  <div class="col-lg-8"><div class="card h-100"><div class="card-header">Динамика доходов и расходов за 12 месяцев</div>
+    <div class="card-body"><canvas id="dynChart" height="110"></canvas></div></div></div>
+  <div class="col-lg-4"><div class="card h-100"><div class="card-header">Прогноз текущего месяца</div>
+    <div class="card-body"><canvas id="fcChart" height="200"></canvas>
+      <p class="small text-muted mt-3 mb-0">Прогноз = уже потрачено + средний дневной темп текущих трат за 90 дней ({{ forecast.avg_daily|money }}, без крупных разовых платежей) × {{ forecast.days_left }} оставшихся дн.</p></div></div></div>
+</div>
+
+<div class="row g-3 mb-3">
+  <div class="col-lg-6"><div class="card h-100"><div class="card-header">Структура расходов</div><div class="card-body">
+    {% if expense_cats %}<div class="row align-items-center"><div class="col-md-6"><canvas id="expChart"></canvas></div>
+    <div class="col-md-6"><table class="table table-sm small mb-0">
+      {% for c in expense_cats %}<tr><td><span class="acc-dot" style="background:{{ c.color }}"></span>{{ c.name }}</td>
+        <td class="text-end text-nowrap">{{ c.amount|money }}</td><td class="text-end text-muted text-nowrap">{{ c.share }}%</td></tr>{% endfor %}
+    </table></div></div>{% else %}<p class="text-muted text-center my-5">Нет данных</p>{% endif %}
+  </div></div></div>
+  <div class="col-lg-6"><div class="card h-100"><div class="card-header">Структура доходов</div><div class="card-body">
+    {% if income_cats %}<div class="row align-items-center"><div class="col-md-6"><canvas id="incChart"></canvas></div>
+    <div class="col-md-6"><table class="table table-sm small mb-0">
+      {% for c in income_cats %}<tr><td><span class="acc-dot" style="background:{{ c.color }}"></span>{{ c.name }}</td>
+        <td class="text-end text-nowrap">{{ c.amount|money }}</td><td class="text-end text-muted text-nowrap">{{ c.share }}%</td></tr>{% endfor %}
+    </table></div></div>{% else %}<p class="text-muted text-center my-5">Нет данных</p>{% endif %}
+  </div></div></div>
+</div>
+
+<div class="row g-3">
+  <div class="col-lg-8"><div class="card h-100"><div class="card-header">Расходы по дням</div>
+    <div class="card-body">{% if daily.labels %}<canvas id="dayChart" height="110"></canvas>{% else %}<p class="text-muted">Период слишком длинный для подневного графика (макс. 3 месяца).</p>{% endif %}</div></div></div>
+  <div class="col-lg-4"><div class="card h-100"><div class="card-header">Средние расходы по дням недели</div>
+    <div class="card-body"><canvas id="wdChart" height="220"></canvas></div></div></div>
+</div>
+{% endblock %}
+{% block scripts %}
+<script>
+const dyn = {{ dynamics|tojson }}, fc = {{ forecast|tojson }};
+const exp = {{ expense_cats|tojson }}, inc = {{ income_cats|tojson }};
+const daily = {{ daily|tojson }}, wd = {{ weekday|tojson }};
+mixedChart('dynChart', dyn);
+barChart('fcChart', ['Доходы', 'Потрачено', 'Прогноз'], [{
+  label: 'Сумма', data: [fc.income, fc.spent, fc.projected],
+  backgroundColor: ['#198754', '#fd7e14', fc.projected > fc.income ? '#dc3545' : '#0d6efd']}], {legend: false});
+if (exp.length) doughnutChart('expChart', exp);
+if (inc.length) doughnutChart('incChart', inc);
+if (daily.labels.length) barChart('dayChart', daily.labels, [{label: 'Расходы', data: daily.values, backgroundColor: '#dc3545aa'}], {legend: false});
+barChart('wdChart', ['Пн','Вт','Ср','Чт','Пт','Сб','Вс'], [{label: 'Средний расход', data: wd, backgroundColor: '#6f42c1'}], {legend: false});
+</script>
+{% endblock %}

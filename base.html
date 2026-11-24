@@ -1,0 +1,63 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{% block title %}FinControl{% endblock %} — учёт личных финансов</title>
+  <link href="{{ url_for('static', filename='vendor/bootstrap.min.css') }}" rel="stylesheet">
+  <link href="{{ url_for('static', filename='vendor/bootstrap-icons.min.css') }}" rel="stylesheet">
+  <link href="{{ url_for('static', filename='css/style.css') }}" rel="stylesheet">
+  <script>document.documentElement.dataset.bsTheme = localStorage.getItem('theme') || 'light';</script>
+</head>
+<body>
+{% if current_user.is_authenticated %}
+<div class="d-flex">
+  <nav class="sidebar d-flex flex-column p-3" id="sidebar">
+    <a href="{{ url_for('dashboard') }}" class="brand mb-4"><i class="bi bi-wallet2"></i> FinControl</a>
+    {% set ep = request.endpoint %}
+    {% for e, icon, label in [
+      ('dashboard','speedometer2','Главная'),
+      ('transactions','arrow-left-right','Операции'),
+      ('accounts','credit-card','Счета'),
+      ('categories','tags','Категории'),
+      ('budgets','clipboard-data','Бюджеты'),
+      ('goals','bullseye','Цели'),
+      ('analytics_page','bar-chart-line','Аналитика'),
+      ('profile','person-circle','Профиль')] %}
+      <a href="{{ url_for(e) }}" class="nav-item {% if ep and ep.startswith(e.split('_')[0].rstrip('s')) %}active{% endif %}">
+        <i class="bi bi-{{ icon }}"></i> {{ label }}</a>
+    {% endfor %}
+    <div class="mt-auto">
+      <button class="nav-item w-100 border-0 bg-transparent text-start" onclick="toggleTheme()">
+        <i class="bi bi-circle-half"></i> Тема</button>
+      <a href="{{ url_for('logout') }}" class="nav-item"><i class="bi bi-box-arrow-right"></i> Выход</a>
+    </div>
+  </nav>
+  <main class="flex-grow-1 main-content">
+    <header class="topbar d-flex align-items-center justify-content-between px-4 py-3">
+      <div class="d-flex align-items-center gap-2">
+        <button class="btn btn-sm btn-outline-secondary d-lg-none" onclick="document.getElementById('sidebar').classList.toggle('open')">
+          <i class="bi bi-list"></i></button>
+        <h1 class="h4 mb-0">{% block heading %}{% endblock %}</h1>
+      </div>
+      <div class="d-flex align-items-center gap-2">
+        <a href="{{ url_for('transaction_form', type='income') }}" class="btn btn-success btn-sm"><i class="bi bi-plus-lg"></i> Доход</a>
+        <a href="{{ url_for('transaction_form', type='expense') }}" class="btn btn-danger btn-sm"><i class="bi bi-dash-lg"></i> Расход</a>
+        <span class="text-muted small d-none d-md-inline ms-2"><i class="bi bi-person"></i> {{ current_user.username }}</span>
+      </div>
+    </header>
+    <div class="p-4">
+      {% include '_flash.html' %}
+      {% block content %}{% endblock %}
+    </div>
+  </main>
+</div>
+{% else %}
+  {% block public %}{% endblock %}
+{% endif %}
+<script src="{{ url_for('static', filename='vendor/bootstrap.bundle.min.js') }}"></script>
+<script src="{{ url_for('static', filename='vendor/chart.umd.min.js') }}"></script>
+<script src="{{ url_for('static', filename='js/app.js') }}"></script>
+{% block scripts %}{% endblock %}
+</body>
+</html>

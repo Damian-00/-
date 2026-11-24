@@ -1,0 +1,25 @@
+{% extends 'base.html' %}
+{% block title %}Регистрация{% endblock %}
+{% block public %}
+<div class="auth-wrap">
+  <div class="card auth-card shadow">
+    <div class="card-body p-4">
+      <h2 class="h4 text-center mb-4"><i class="bi bi-wallet2 text-primary"></i> Регистрация</h2>
+      {% include '_flash.html' %}
+      <form method="post">
+        <input type="hidden" name="_csrf" value="{{ csrf_token() }}">
+        <div class="mb-3"><label class="form-label">Логин</label>
+          <input name="username" class="form-control" value="{{ form.get('username','') }}" minlength="3" required></div>
+        <div class="mb-3"><label class="form-label">E-mail</label>
+          <input name="email" type="email" class="form-control" value="{{ form.get('email','') }}" required></div>
+        <div class="mb-3"><label class="form-label">Пароль</label>
+          <input name="password" type="password" class="form-control" minlength="6" required></div>
+        <div class="mb-3"><label class="form-label">Повторите пароль</label>
+          <input name="password2" type="password" class="form-control" minlength="6" required></div>
+        <button class="btn btn-primary w-100">Создать аккаунт</button>
+      </form>
+      <p class="text-center mt-3 mb-0 small">Уже есть аккаунт? <a href="{{ url_for('login') }}">Войти</a></p>
+    </div>
+  </div>
+</div>
+{% endblock %}

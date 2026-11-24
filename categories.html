@@ -1,0 +1,59 @@
+{% extends 'base.html' %}
+{% block title %}Категории{% endblock %}
+{% block heading %}Категории{% endblock %}
+{% block content %}
+<div class="d-flex justify-content-end mb-3">
+  <button class="btn btn-primary btn-sm" onclick="editCat({type:'expense'})"><i class="bi bi-plus-lg"></i> Новая категория</button></div>
+<div class="row g-3">
+  {% for title, items, cls in [('Категории расходов', expense, 'danger'), ('Категории доходов', income, 'success')] %}
+  <div class="col-lg-6"><div class="card h-100">
+    <div class="card-header text-{{ cls }}">{{ title }} ({{ items|length }})</div>
+    <ul class="list-group list-group-flush">
+      {% for c in items %}
+      <li class="list-group-item d-flex align-items-center">
+        <span class="cat-dot me-2" style="background:{{ c.color }}"><i class="bi bi-{{ c.icon }}"></i></span>
+        <span class="flex-grow-1">{{ c.name }} <span class="text-muted small">· {{ c.transactions|length }} опер.</span></span>
+        <button class="btn btn-sm btn-link" onclick='editCat({{ {"id":c.id,"name":c.name,"type":c.type,"color":c.color,"icon":c.icon}|tojson }})'><i class="bi bi-pencil"></i></button>
+        <form method="post" action="{{ url_for('category_delete', cid=c.id) }}" onsubmit="return confirm('Удалить категорию?')">
+          <input type="hidden" name="_csrf" value="{{ csrf_token() }}"><button class="btn btn-sm btn-link text-danger"><i class="bi bi-trash"></i></button></form>
+      </li>
+      {% endfor %}
+    </ul>
+  </div></div>
+  {% endfor %}
+</div>
+
+<div class="modal fade" id="catModal" tabindex="-1"><div class="modal-dialog"><div class="modal-content">
+  <form method="post"><input type="hidden" name="_csrf" value="{{ csrf_token() }}"><input type="hidden" name="id">
+    <div class="modal-header"><h5 class="modal-title">Категория</h5><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div>
+    <div class="modal-body">
+      <div class="mb-3"><label class="form-label">Название</label><input name="name" class="form-control" required></div>
+      <div class="mb-3"><label class="form-label">Тип</label><select name="type" class="form-select">
+        <option value="expense">Расход</option><option value="income">Доход</option></select></div>
+      <div class="row">
+        <div class="col-4 mb-3"><label class="form-label">Цвет</label><input type="color" name="color" class="form-control form-control-color"></div>
+        <div class="col-8 mb-3"><label class="form-label">Иконка</label>
+          <div class="icon-picker d-flex flex-wrap gap-1">
+            {% for i in ['tag','basket','cup-hot','bus-front','car-front','house','wifi','heart-pulse','bag','controller','book','gift','briefcase','laptop','piggy-bank','airplane','phone','music-note','scissors','three-dots'] %}
+            <button type="button" class="btn btn-sm btn-outline-secondary" data-icon="{{ i }}" onclick="pickIcon('{{ i }}')"><i class="bi bi-{{ i }}"></i></button>{% endfor %}
+          </div><input type="hidden" name="icon"></div>
+      </div>
+    </div>
+    <div class="modal-footer"><button class="btn btn-primary">Сохранить</button></div>
+  </form>
+</div></div></div>
+{% endblock %}
+{% block scripts %}
+<script>
+function pickIcon(i) {
+  document.querySelector('#catModal [name=icon]').value = i;
+  document.querySelectorAll('.icon-picker button').forEach(b => b.classList.toggle('active', b.dataset.icon === i));
+}
+function editCat(c) {
+  const f = document.querySelector('#catModal form');
+  f.elements['id'].value = c.id || ''; f.elements['name'].value = c.name || ''; f.elements['type'].value = c.type || 'expense';
+  f.elements['color'].value = c.color || '#6c757d'; pickIcon(c.icon || 'tag');
+  new bootstrap.Modal('#catModal').show();
+}
+</script>
+{% endblock %}
